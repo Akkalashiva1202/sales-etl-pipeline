@@ -4,7 +4,9 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sum, count
 
 
+# --------------------------------------------------
 # 1. Create Spark session
+# --------------------------------------------------
 
 spark = (
     SparkSession.builder
@@ -15,11 +17,37 @@ spark = (
 print("Spark started successfully")
 
 
-# 2. Read sample data
+# --------------------------------------------------
+# 2. Determine input file path
+# --------------------------------------------------
 
-input_path = f"file:{os.getcwd()}/data/orders.csv"
+# Databricks sets this environment variable when running
+# the code from our Databricks Git folder.
+#
+# For local execution, we use the normal project path.
+
+DATABRICKS_PATH = (
+    "file:/Workspace/Users/akkalashiva05@gmail.com/"
+    "sales-etl-pipeline/data/orders.csv"
+)
+
+LOCAL_PATH = "data/orders.csv"
+
+
+if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
+    input_path = DATABRICKS_PATH
+    print("Running in Databricks")
+else:
+    input_path = LOCAL_PATH
+    print("Running locally")
+
 
 print(f"Reading input file: {input_path}")
+
+
+# --------------------------------------------------
+# 3. Read input data
+# --------------------------------------------------
 
 orders_df = (
     spark.read
@@ -32,7 +60,9 @@ print("Input data:")
 orders_df.show()
 
 
-# 3. Transform data
+# --------------------------------------------------
+# 4. Transform data
+# --------------------------------------------------
 
 orders_transformed = orders_df.withColumn(
     "revenue",
@@ -43,7 +73,9 @@ print("Transformed data:")
 orders_transformed.show()
 
 
-# 4. Create daily sales summary
+# --------------------------------------------------
+# 5. Create daily sales summary
+# --------------------------------------------------
 
 daily_sales = (
     orders_transformed
@@ -59,7 +91,9 @@ print("Daily sales summary:")
 daily_sales.show()
 
 
-# 5. Stop Spark
+# --------------------------------------------------
+# 6. Stop Spark
+# --------------------------------------------------
 
 spark.stop()
 
