@@ -1,8 +1,11 @@
+import os
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sum, count
 
 
 # 1. Create Spark session
+
 spark = (
     SparkSession.builder
     .appName("SalesETL")
@@ -13,11 +16,16 @@ print("Spark started successfully")
 
 
 # 2. Read sample data
+
+input_path = f"file:{os.getcwd()}/data/orders.csv"
+
+print(f"Reading input file: {input_path}")
+
 orders_df = (
     spark.read
     .option("header", True)
     .option("inferSchema", True)
-    .csv("data/orders.csv")
+    .csv(input_path)
 )
 
 print("Input data:")
@@ -25,6 +33,7 @@ orders_df.show()
 
 
 # 3. Transform data
+
 orders_transformed = orders_df.withColumn(
     "revenue",
     col("quantity") * col("price")
@@ -35,6 +44,7 @@ orders_transformed.show()
 
 
 # 4. Create daily sales summary
+
 daily_sales = (
     orders_transformed
     .groupBy("order_date")
@@ -50,6 +60,7 @@ daily_sales.show()
 
 
 # 5. Stop Spark
+
 spark.stop()
 
 print("ETL completed successfully")
