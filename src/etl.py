@@ -1,12 +1,10 @@
-import os
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sum, count
 
 
-# --------------------------------------------------
-# 1. Create Spark session
-# --------------------------------------------------
+# ============================================================
+# 1. Create Spark Session
+# ============================================================
 
 spark = (
     SparkSession.builder
@@ -17,37 +15,41 @@ spark = (
 print("Spark started successfully")
 
 
-# --------------------------------------------------
-# 2. Determine input file path
-# --------------------------------------------------
+# ============================================================
+# 2. Detect Environment
+# ============================================================
 
-# Databricks sets this environment variable when running
-# the code from our Databricks Git folder.
-#
-# For local execution, we use the normal project path.
-
-DATABRICKS_PATH = (
-    "file:/Workspace/Users/akkalashiva05@gmail.com/"
-    "sales-etl-pipeline/data/orders.csv"
-)
-
-LOCAL_PATH = "data/orders.csv"
+try:
+    dbutils
+    running_in_databricks = True
+except NameError:
+    running_in_databricks = False
 
 
-if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
-    input_path = DATABRICKS_PATH
+# ============================================================
+# 3. Read Input CSV
+# ============================================================
+
+if running_in_databricks:
+
+    input_path = (
+        "file:/Workspace/Users/"
+        "akkalashiva05@gmail.com/"
+        "sales-etl-pipeline/"
+        "data/orders.csv"
+    )
+
     print("Running in Databricks")
+
 else:
-    input_path = LOCAL_PATH
+
+    input_path = "data/orders.csv"
+
     print("Running locally")
 
 
 print(f"Reading input file: {input_path}")
 
-
-# --------------------------------------------------
-# 3. Read input data
-# --------------------------------------------------
 
 orders_df = (
     spark.read
@@ -56,26 +58,64 @@ orders_df = (
     .csv(input_path)
 )
 
+
 print("Input data:")
 orders_df.show()
 
 
-# --------------------------------------------------
-# 4. Transform data
-# --------------------------------------------------
+# ============================================================
+# 4. BRONZE LAYER
+# ============================================================
+
+bronze_table = "workspace.sales_etl.bronze_orders"
+
+print(f"Writing Bronze table: {bronze_table}")
+
+
+orders_df.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable(bronze_table)
+
+
+print("Bronze table written successfully")
+
+
+# ============================================================
+# 5. SILVER TRANSFORMATION
+# ============================================================
 
 orders_transformed = orders_df.withColumn(
     "revenue",
     col("quantity") * col("price")
 )
 
+
 print("Transformed data:")
 orders_transformed.show()
 
 
-# --------------------------------------------------
-# 5. Create daily sales summary
-# --------------------------------------------------
+# ============================================================
+# 6. SILVER LAYER
+# ============================================================
+
+silver_table = "workspace.sales_etl.silver_orders"
+
+print(f"Writing Silver table: {silver_table}")
+
+
+orders_transformed.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable(silver_table)
+
+
+print("Silver table written successfully")
+
+
+# ============================================================
+# 7. GOLD AGGREGATION
+# ============================================================
 
 daily_sales = (
     orders_transformed
@@ -87,13 +127,32 @@ daily_sales = (
     .orderBy("order_date")
 )
 
+
 print("Daily sales summary:")
 daily_sales.show()
 
 
-# --------------------------------------------------
-# 6. Stop Spark
-# --------------------------------------------------
+# ============================================================
+# 8. GOLD LAYER
+# ============================================================
+
+gold_table = "workspace.sales_etl.gold_daily_sales"
+
+print(f"Writing Gold table: {gold_table}")
+
+
+daily_sales.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable(gold_table)
+
+
+print("Gold table written successfully")
+
+
+# ============================================================
+# 9. Stop Spark
+# ============================================================
 
 spark.stop()
 
