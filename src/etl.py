@@ -6,7 +6,6 @@ from pyspark.sql.functions import col, sum, count
 spark = (
     SparkSession.builder
     .appName("SalesETL")
-    .master("local[*]")
     .getOrCreate()
 )
 
