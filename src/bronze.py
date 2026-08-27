@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession
+import argparse
 
 
 # ============================================================
@@ -19,12 +20,20 @@ print("=== VERSION 2: BRONZE LAYER STARTED ===")
 # Input Configuration
 # ============================================================
 
-input_path = (
-    "file:/Workspace/Users/"
-    "akkalashiva05@gmail.com/"
-    "sales-etl-pipeline/"
-    "data/orders.csv"
+parser = argparse.ArgumentParser(
+    description="Sales ETL Bronze Layer"
 )
+
+parser.add_argument(
+    "-f",
+    "--file",
+    required=True,
+    help="Path to the input CSV file"
+)
+
+args = parser.parse_args()
+
+input_path = args.file
 
 bronze_table = "workspace.sales_etl.bronze_orders"
 
